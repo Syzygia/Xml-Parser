@@ -1,0 +1,20 @@
+{
+   "Nodes" : [
+        {
+            "NodeName" : "mainsection",
+            "title" : "CPU",
+            "Childrens" : [
+                {
+                    "NodeName" : "section",
+                    "title" : "0",
+                    "Childrens" : [
+                        {
+                            "NodeName" : "entry",
+                            "title" : "Cores"                            
+                        }
+                    ]                    
+                }
+            ]
+        }
+    ]
+}
