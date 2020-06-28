@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,6 +15,8 @@ namespace Xml_Parser
     class Program
     {
         static dynamic config;
+        static ExcelPackage excel = new ExcelPackage();
+        static int nodesParsed = 0;
         [STAThread]
         static void Main(string[] args)
         {
@@ -54,13 +57,33 @@ namespace Xml_Parser
                         {
                             try
                             {
+                                LoadHeaders();
+                                //to write in correct row
+                                int filesParsed = 2;                                
                                 foreach (var filename in LoadXml())
                                 {
+                                    excel.Workbook.Worksheets.First().Cells[filesParsed, 1].Value =
+                                        Path.GetFileNameWithoutExtension(filename);
+                                    nodesParsed = 2;
                                     XElement data = XElement.Load(filename);
                                     foreach (var node in config.Nodes)
-                                    {
-                                        ParseNode(node, data);
+                                    {                     
+                                        WasBond = false;
+                                        ParseNode(node, data, filesParsed);
                                     }
+                                    ++filesParsed;
+                                }
+                                SaveExcel();
+                                Console.WriteLine("Your data have been succesfully parsed!" 
+                                    + System.Environment.NewLine +
+                                    "Do you want to parse anything else? (y/n)");
+                                if (Console.ReadLine() == "y")
+                                {
+
+                                }
+                                else
+                                {
+                                    return;
                                 }
                             }
                             catch (Exception ex)
@@ -73,24 +96,48 @@ namespace Xml_Parser
             }
         }
 
-        static void ParseNode(dynamic node, XElement data)
+        static bool WasBond = false;
+        static void ParseNode(dynamic node, XElement data, int filesParsed)
         {
             //if title has a name
-            bool isNumeric = (((string)node.title).All(c => c >= '0' && c <= '9'));            
+            bool isNumber = isNumeric((string)node.title);            
             
             if (node.Childrens is null)
             {                
-                Console.WriteLine(data.Elements((string)node.NodeName).Where(x => (string)x.Attribute("title") == (string)node.title).FirstOrDefault().Attribute("value").Value);
-                Excel.Application xlApp = new
-                Microsoft.Office.Interop.Excel.Application();
+                /*Console.WriteLine(data.Elements((string)node.NodeName)
+                    .Where(x => (string)x.Attribute("title") ==
+                    (string)node.title).FirstOrDefault().Attribute("value").Value);*/
+                var parsedData = isNumber ?
+                    data.Elements((string)node.NodeName).ToList()
+                    [int.Parse((string)node.title)].Attribute("value").Value
+                    : data.Elements((string)node.NodeName)
+                    .Where(x => (string)x.Attribute("title")
+                    == (string)node.title).FirstOrDefault().Attribute("value").Value;
+                if (node.bond is null)
+                {
+                    nodesParsed += WasBond ? 1 : 0;
+                    var excelData = excel.Workbook.Worksheets["Worksheet1"]
+                        .Cells[filesParsed, nodesParsed++];                
+                    excelData.Value = parsedData;
+                }
+               else
+                {
+                    var excelData = excel.Workbook.Worksheets["Worksheet1"]
+                        .Cells[filesParsed, nodesParsed];
+                    excelData.Value += " " + parsedData;
+                    WasBond = true;
+                }
+                    
             }
             else
             {
                 foreach (var node_ in node.Childrens)
                 {
-                    ParseNode(node_, isNumeric?
+                    ParseNode(node_, isNumber?
                         data.Elements((string)node.NodeName).ToList()[int.Parse((string)node.title)]
-                        : data.Elements((string)node.NodeName).Where(x => (string)x.Attribute("title") == (string)node.title).FirstOrDefault()
+                        : data.Elements((string)node.NodeName).Where(x => (string)x.Attribute("title")
+                        == (string)node.title).FirstOrDefault(),
+                        filesParsed
                         );
                 }
             }
@@ -128,7 +175,6 @@ namespace Xml_Parser
                     Console.WriteLine("Something goes wrong when loading xml files, try again");
                     return null;
                 }
-
             }
         }
 
@@ -142,6 +188,45 @@ namespace Xml_Parser
             {
                 Console.WriteLine(ex.Message);
             }            
+        }
+
+        static void LoadHeaders ()
+        {            
+            ExcelWorksheet sheet = excel.Workbook.Worksheets.Add("Worksheet1");
+            int i = 0;
+            foreach (var header in config.Headers)
+            {
+                sheet.Cells[1, ++i].Value = (string)header;
+            }            
+        }
+
+        static void SaveExcel ()
+        {
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Title = "Choose folder to save Excel file";
+                saveFileDialog.InitialDirectory = "c:\\";
+                saveFileDialog.DefaultExt = "xlsx";
+                saveFileDialog.Filter = "xls files (*.xls)| *.xls | xlsx files (*.xlsx)| *.xlsx";
+                saveFileDialog.FilterIndex = 2;
+                saveFileDialog.RestoreDirectory = false;                
+                saveFileDialog.CheckPathExists = true;
+
+                if (saveFileDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                {
+                    excel.SaveAs(new FileInfo(saveFileDialog.FileName));
+                }
+                else
+                {
+                    Console.WriteLine("Something goes wrong when trying to save excel file");                   
+                }
+
+            }
+        }
+
+        static bool isNumeric(string data)
+        {
+            return data.All(c => c >= '0' && c <= '9');
         }
     }
 }

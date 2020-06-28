@@ -1,20 +1,25 @@
 {
-   "Nodes" : [
+  "Headers": [
+    "Pc Name",
+    "Cores"
+  ],
+
+  "Nodes": [
+    {
+      "NodeName": "mainsection",
+      "title": "CPU",
+      "Childrens": [
         {
-            "NodeName" : "mainsection",
-            "title" : "CPU",
-            "Childrens" : [
-                {
-                    "NodeName" : "section",
-                    "title" : "0",
-                    "Childrens" : [
-                        {
-                            "NodeName" : "entry",
-                            "title" : "Cores"                            
-                        }
-                    ]                    
-                }
-            ]
+          "NodeName": "section",
+          "title": "0",
+          "Childrens": [
+            {
+              "NodeName": "entry",
+              "title": "Cores"
+            }
+          ]
         }
-    ]
+      ]
+    }
+  ]
 }
